@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────
+
+enum ProjectStatus {
+  DRAFT
+  UPLOADED
+  ANALYZING
+  ANALYZED
+  PLANNING
+  PLANNED
+  RENDERING
+  RENDERED
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum StepStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum MediaAssetType {
+  SOURCE_VIDEO
+  TRANSCRIPT_FILE
+  WAVEFORM_DATA
+  SUBTITLE_FILE
+  RENDERED_VIDEO
+  THUMBNAIL
+  VOICEOVER_AUDIO
+}
+
+// ─── NextAuth Models ─────────────────────────────────
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  password       String?
+  image          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  diskUsageBytes BigInt    @default(0)
+  aiApiKey       String?
+  aiBaseUrl      String?
+
+  accounts Account[]
+  sessions Session[]
+  projects Project[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum JobType {
+  ANALYSIS
+  PLANNING
+  RENDER
+}
+
+// ─── Domain Models ───────────────────────────────────
+
+model Project {
+  id             String        @id @default(cuid())
+  userId         String
+  name           String
+  description    String?
+  status         ProjectStatus @default(DRAFT)
+  sourceVideoId  String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaAssets     MediaAsset[]
+  analysisReport  AnalysisReport?
+  riskReport      RiskReport?
+  editPlans       EditPlan[]
+  renderJobs      RenderJob[]
+  backgroundJobs  BackgroundJob[]
+  editorState     EditorState?
+}
+
+model BackgroundJob {
+  id           String    @id @default(cuid())
+  projectId    String
+  type         JobType
+  status       JobStatus @default(QUEUED)
+  queueJobId   String    @unique
+  progress     Int       @default(0)
+  attempts     Int       @default(0)
+  errorMessage String?
+  stepResults  Json?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type, status])
+}
+
+model MediaAsset {
+  id          String         @id @default(cuid())
+  projectId   String
+  type        MediaAssetType
+  storageKey  String
+  fileName    String
+  mimeType    String
+  sizeBytes   BigInt
+  durationMs  Int?
+  width       Int?
+  height      Int?
+  fps         Float?
+  bitrate     Int?
+  codec       String?
+  audioCodec  String?
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  renderJobs  RenderJob[]    @relation("OutputAsset")
+}
+
+model AnalysisReport {
+  id               String     @id @default(cuid())
+  projectId        String     @unique
+  version          Int        @default(1)
+  transcriptJson   Json?
+  transcriptStatus StepStatus @default(PENDING)
+  scenesJson       Json?
+  scenesStatus     StepStatus @default(PENDING)
+  ocrJson          Json?
+  ocrStatus        StepStatus @default(PENDING)
+  audioJson        Json?
+  audioStatus      StepStatus @default(PENDING)
+  aiAnalysisJson   Json?
+  aiAnalysisStatus StepStatus @default(PENDING)
+  metadataJson     Json?
+  summaryJson      Json?
+  durationMs       Int?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model RiskReport {
+  id                     String   @id @default(cuid())
+  projectId              String   @unique
+  overallScore           Float
+  watermarkScore         Float?
+  audioReuseScore        Float?
+  lowTransformationScore Float?
+  notesJson              Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model EditPlan {
+  id                     String   @id @default(cuid())
+  projectId              String
+  modelName              String
+  promptVersion          String
+  planJson               Json
+  scriptText             String?
+  titleOptionsJson       Json?
+  descriptionOptionsJson Json?
+  hashtagOptionsJson     Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model RenderJob {
+  id                 String    @id @default(cuid())
+  projectId          String
+  status             JobStatus @default(QUEUED)
+  inputPlanVersion   String?
+  outputMediaAssetId String?
+  logsJson           Json?
+  errorMessage       String?
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  outputMediaAsset MediaAsset? @relation("OutputAsset", fields: [outputMediaAssetId], references: [id])
+}
+
+// ─── Editor State ───────────────────────────────────
+
+model EditorState {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clips       Json     // Legacy: Array of clip segments [{id, startMs, endMs, sourceStartMs, sourceEndMs}]
+  markers     Json?    // AI markers + user markers
+  tracks      Json?    // Multi-track: Array of Track objects
+  trackItems  Json?    // Multi-track: Array of TrackItem objects
+  playheadMs  Int      @default(0)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
