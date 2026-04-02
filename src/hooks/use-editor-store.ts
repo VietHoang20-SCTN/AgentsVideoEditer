@@ -4,9 +4,9 @@
 // ============================================
 
 import { useShallow } from "zustand/react/shallow";
+import { useMemo } from "react";
 import { useEditorStore } from "@/stores/editor-store";
 import type {
-  EditorStoreState,
   TrackItem,
   Track,
   Marker,
@@ -40,8 +40,10 @@ export function useSnapSettings(): SnapSettings {
 
 /** Select sorted tracks */
 export function useSortedTracks(): Track[] {
-  return useEditorStore(
-    useShallow((s) => [...s.tracks].sort((a, b) => a.order - b.order))
+  const tracks = useEditorStore((s) => s.tracks);
+  return useMemo(
+    () => [...tracks].sort((a, b) => a.order - b.order),
+    [tracks]
   );
 }
 
@@ -118,81 +120,80 @@ export function useTimelineView() {
 
 /** Select common editor actions (stable references via zustand) */
 export function useEditorActions() {
-  return useEditorStore(
-    useShallow((s) => ({
-      // Track actions
-      addTrack: s.addTrack,
-      removeTrack: s.removeTrack,
-      updateTrack: s.updateTrack,
-      reorderTrack: s.reorderTrack,
-      toggleTrackVisibility: s.toggleTrackVisibility,
-      toggleTrackLock: s.toggleTrackLock,
-      toggleTrackMute: s.toggleTrackMute,
-      // Item actions
-      addTrackItem: s.addTrackItem,
-      removeTrackItem: s.removeTrackItem,
-      removeTrackItems: s.removeTrackItems,
-      updateTrackItem: s.updateTrackItem,
-      updateTrackItemProperties: s.updateTrackItemProperties,
-      moveTrackItem: s.moveTrackItem,
-      trimTrackItemStart: s.trimTrackItemStart,
-      trimTrackItemEnd: s.trimTrackItemEnd,
-      splitTrackItem: s.splitTrackItem,
-      duplicateTrackItem: s.duplicateTrackItem,
-      // Selection
-      selectItem: s.selectItem,
-      deselectItem: s.deselectItem,
-      selectItems: s.selectItems,
-      selectAll: s.selectAll,
-      clearSelection: s.clearSelection,
-      selectTrack: s.selectTrack,
-      // Clipboard
-      copySelection: s.copySelection,
-      cutSelection: s.cutSelection,
-      paste: s.paste,
-      duplicateSelection: s.duplicateSelection,
-      // Playback
-      setPlayhead: s.setPlayhead,
-      togglePlayback: s.togglePlayback,
-      setPlaybackRate: s.setPlaybackRate,
-      seekForward: s.seekForward,
-      seekBackward: s.seekBackward,
-      seekToStart: s.seekToStart,
-      seekToEnd: s.seekToEnd,
-      seekToNextItem: s.seekToNextItem,
-      seekToPrevItem: s.seekToPrevItem,
-      // Markers
-      addMarker: s.addMarker,
-      removeMarker: s.removeMarker,
-      setMarkers: s.setMarkers,
-      // Zoom
-      setZoom: s.setZoom,
-      zoomIn: s.zoomIn,
-      zoomOut: s.zoomOut,
-      zoomToFit: s.zoomToFit,
-      setScrollLeft: s.setScrollLeft,
-      // Panels
-      setLeftTab: s.setLeftTab,
-      toggleLeftPanel: s.toggleLeftPanel,
-      setLeftWidth: s.setLeftWidth,
-      setRightContext: s.setRightContext,
-      toggleRightPanel: s.toggleRightPanel,
-      setRightWidth: s.setRightWidth,
-      setTimelineHeight: s.setTimelineHeight,
-      // Snap
-      toggleSnap: s.toggleSnap,
-      setSnapSettings: s.setSnapSettings,
-      // Volume
-      setMasterVolume: s.setMasterVolume,
-      // Persistence
-      loadState: s.loadState,
-      markDirty: s.markDirty,
-      markClean: s.markClean,
-      setSaving: s.setSaving,
-      getSerializableState: s.getSerializableState,
-      // History
-      undo: s.undo,
-      redo: s.redo,
-    }))
-  );
+  // Actions are stable references in Zustand - no need for useShallow
+  return useEditorStore((s) => ({
+    // Track actions
+    addTrack: s.addTrack,
+    removeTrack: s.removeTrack,
+    updateTrack: s.updateTrack,
+    reorderTrack: s.reorderTrack,
+    toggleTrackVisibility: s.toggleTrackVisibility,
+    toggleTrackLock: s.toggleTrackLock,
+    toggleTrackMute: s.toggleTrackMute,
+    // Item actions
+    addTrackItem: s.addTrackItem,
+    removeTrackItem: s.removeTrackItem,
+    removeTrackItems: s.removeTrackItems,
+    updateTrackItem: s.updateTrackItem,
+    updateTrackItemProperties: s.updateTrackItemProperties,
+    moveTrackItem: s.moveTrackItem,
+    trimTrackItemStart: s.trimTrackItemStart,
+    trimTrackItemEnd: s.trimTrackItemEnd,
+    splitTrackItem: s.splitTrackItem,
+    duplicateTrackItem: s.duplicateTrackItem,
+    // Selection
+    selectItem: s.selectItem,
+    deselectItem: s.deselectItem,
+    selectItems: s.selectItems,
+    selectAll: s.selectAll,
+    clearSelection: s.clearSelection,
+    selectTrack: s.selectTrack,
+    // Clipboard
+    copySelection: s.copySelection,
+    cutSelection: s.cutSelection,
+    paste: s.paste,
+    duplicateSelection: s.duplicateSelection,
+    // Playback
+    setPlayhead: s.setPlayhead,
+    togglePlayback: s.togglePlayback,
+    setPlaybackRate: s.setPlaybackRate,
+    seekForward: s.seekForward,
+    seekBackward: s.seekBackward,
+    seekToStart: s.seekToStart,
+    seekToEnd: s.seekToEnd,
+    seekToNextItem: s.seekToNextItem,
+    seekToPrevItem: s.seekToPrevItem,
+    // Markers
+    addMarker: s.addMarker,
+    removeMarker: s.removeMarker,
+    setMarkers: s.setMarkers,
+    // Zoom
+    setZoom: s.setZoom,
+    zoomIn: s.zoomIn,
+    zoomOut: s.zoomOut,
+    zoomToFit: s.zoomToFit,
+    setScrollLeft: s.setScrollLeft,
+    // Panels
+    setLeftTab: s.setLeftTab,
+    toggleLeftPanel: s.toggleLeftPanel,
+    setLeftWidth: s.setLeftWidth,
+    setRightContext: s.setRightContext,
+    toggleRightPanel: s.toggleRightPanel,
+    setRightWidth: s.setRightWidth,
+    setTimelineHeight: s.setTimelineHeight,
+    // Snap
+    toggleSnap: s.toggleSnap,
+    setSnapSettings: s.setSnapSettings,
+    // Volume
+    setMasterVolume: s.setMasterVolume,
+    // Persistence
+    loadState: s.loadState,
+    markDirty: s.markDirty,
+    markClean: s.markClean,
+    setSaving: s.setSaving,
+    getSerializableState: s.getSerializableState,
+    // History
+    undo: s.undo,
+    redo: s.redo,
+  }));
 }

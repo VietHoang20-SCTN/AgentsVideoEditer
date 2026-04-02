@@ -3,7 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string(),
-  NEXTAUTH_SECRET: z.string().min(1),
+  NEXTAUTH_SECRET: z.string().min(32, "NEXTAUTH_SECRET must be at least 32 characters"),
   NEXTAUTH_URL: z.string().url(),
   UPLOAD_DIR: z.string().default("./uploads"),
   OPENAI_API_KEY: z.string().optional().or(z.literal("").transform(() => undefined)),
@@ -16,6 +16,13 @@ const envSchema = z.object({
   WORKER_RENDER_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(1),
   DISK_QUOTA_BYTES: z.coerce.number().default(5 * 1024 * 1024 * 1024),
   STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
+  METRICS_TOKEN: z.string().optional(),
 });
 
-export const env = envSchema.parse(process.env);
+const result = envSchema.safeParse(process.env);
+if (!result.success) {
+  console.error("❌ Invalid environment variables:");
+  console.error(result.error.flatten().fieldErrors);
+  process.exit(1);
+}
+export const env = result.data;

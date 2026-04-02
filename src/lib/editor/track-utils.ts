@@ -12,7 +12,6 @@ import type {
   Marker,
   LegacyClip,
   SerializedEditorState,
-  LegacyEditorStateData,
 } from "@/types/editor";
 import {
   generateId,

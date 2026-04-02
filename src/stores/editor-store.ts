@@ -265,7 +265,7 @@ export const useEditorStore = create<EditorStore>()(
           if (atMs <= item.startMs + MIN_CLIP_MS || atMs >= item.endMs - MIN_CLIP_MS) return;
 
           // Create the second half as a new item
-          const newItem = JSON.parse(JSON.stringify(item)) as TrackItem;
+          const newItem = structuredClone(item) as TrackItem;
           newItem.id = generateId(item.type);
           newItem.startMs = atMs;
 
@@ -297,7 +297,7 @@ export const useEditorStore = create<EditorStore>()(
           const item = state.trackItems.find((i) => i.id === itemId);
           if (!item) return;
 
-          const clone = JSON.parse(JSON.stringify(item)) as TrackItem;
+          const clone = structuredClone(item) as TrackItem;
           clone.id = generateId(item.type);
           // Place after the original
           clone.startMs = item.endMs;
@@ -384,7 +384,7 @@ export const useEditorStore = create<EditorStore>()(
             state.selection.itemIds.includes(i.id)
           );
           state.clipboard = {
-            items: JSON.parse(JSON.stringify(items)),
+            items: structuredClone(items),
             operation: "copy",
             sourceTimeMs: state.playheadMs,
           };
@@ -397,7 +397,7 @@ export const useEditorStore = create<EditorStore>()(
             state.selection.itemIds.includes(i.id)
           );
           state.clipboard = {
-            items: JSON.parse(JSON.stringify(items)),
+            items: structuredClone(items),
             operation: "cut",
             sourceTimeMs: state.playheadMs,
           };
@@ -418,7 +418,7 @@ export const useEditorStore = create<EditorStore>()(
 
           const newIds: string[] = [];
           for (const item of state.clipboard.items) {
-            const clone = JSON.parse(JSON.stringify(item)) as TrackItem;
+            const clone = structuredClone(item) as TrackItem;
             clone.id = generateId(item.type);
             clone.startMs += timeOffset;
             clone.endMs += timeOffset;
@@ -445,7 +445,7 @@ export const useEditorStore = create<EditorStore>()(
 
           const newIds: string[] = [];
           for (const item of items) {
-            const clone = JSON.parse(JSON.stringify(item)) as TrackItem;
+            const clone = structuredClone(item) as TrackItem;
             clone.id = generateId(item.type);
             const duration = clone.endMs - clone.startMs;
             clone.startMs = item.endMs;
@@ -766,7 +766,11 @@ export const useEditorStore = create<EditorStore>()(
       }),
       // Equality check to avoid duplicate history entries
       equality: (pastState, currentState) =>
-        JSON.stringify(pastState) === JSON.stringify(currentState),
+        pastState.tracks === currentState.tracks &&
+        pastState.trackItems === currentState.trackItems &&
+        pastState.markers === currentState.markers &&
+        pastState.playheadMs === currentState.playheadMs &&
+        pastState.duration === currentState.duration,
     }
   )
 );

@@ -53,9 +53,11 @@ export function migrateLegacyState(
       opacity: 100,
       locked: false,
       properties: {
-        ...createDefaultVideoClipProperties(),
-        sourceStartMs: clip.sourceStartMs,
-        sourceEndMs: clip.sourceEndMs,
+        ...createDefaultVideoClipProperties(
+          clip.id,
+          clip.sourceStartMs,
+          clip.sourceEndMs
+        ),
       },
     })
   );
