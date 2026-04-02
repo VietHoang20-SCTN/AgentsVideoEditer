@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { prisma } from "@/lib/db/prisma";
 import { z } from "zod";
+import { withTiming } from "@/lib/api/with-timing";
+import { withErrorHandler } from "@/lib/api/errors";
 
 const updateSettingsSchema = z.object({
   aiApiKey: z.string().optional().nullable(),
@@ -15,7 +17,7 @@ const updateSettingsSchema = z.object({
     }),
 });
 
-export async function GET() {
+async function handleGET() {
   const session = await auth();
   if (!session?.user?.id) return apiError("Unauthorized", 401);
 
@@ -32,40 +34,41 @@ export async function GET() {
   });
 }
 
-export async function PUT(req: Request) {
+async function handlePUT(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return apiError("Unauthorized", 401);
 
-  try {
-    const body = await req.json();
-    const data = updateSettingsSchema.parse(body);
+  const body = await req.json();
+  const data = updateSettingsSchema.parse(body);
 
-    const updated = await prisma.user.upsert({
-      where: { id: session.user.id },
-      create: {
-        id: session.user.id,
-        email: session.user.email ?? "",
-        aiApiKey: data.aiApiKey === "" ? null : (data.aiApiKey ?? null),
-        aiBaseUrl: data.aiBaseUrl ?? null,
-      },
-      update: {
-        aiApiKey: data.aiApiKey === "" ? null : (data.aiApiKey ?? null),
-        aiBaseUrl: data.aiBaseUrl ?? null,
-      },
-      select: { aiApiKey: true, aiBaseUrl: true },
-    });
+  const updated = await prisma.user.upsert({
+    where: { id: session.user.id },
+    create: {
+      id: session.user.id,
+      email: session.user.email ?? "",
+      aiApiKey: data.aiApiKey === "" ? null : (data.aiApiKey ?? null),
+      aiBaseUrl: data.aiBaseUrl ?? null,
+    },
+    update: {
+      aiApiKey: data.aiApiKey === "" ? null : (data.aiApiKey ?? null),
+      aiBaseUrl: data.aiBaseUrl ?? null,
+    },
+    select: { aiApiKey: true, aiBaseUrl: true },
+  });
 
-    return apiSuccess({
-      aiApiKey: updated.aiApiKey ? "***" + updated.aiApiKey.slice(-4) : null,
-      aiBaseUrl: updated.aiBaseUrl,
-      hasApiKey: !!updated.aiApiKey,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiError(error.issues[0].message);
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[PUT /api/user/settings] error:", message);
-    return apiError(`Internal server error: ${message}`, 500);
-  }
+  return apiSuccess({
+    aiApiKey: updated.aiApiKey ? "***" + updated.aiApiKey.slice(-4) : null,
+    aiBaseUrl: updated.aiBaseUrl,
+    hasApiKey: !!updated.aiApiKey,
+  });
 }
+
+export const GET = withTiming(
+  withErrorHandler(handleGET as Parameters<typeof withTiming>[0]),
+  "user-settings-get"
+);
+
+export const PUT = withTiming(
+  withErrorHandler(handlePUT as Parameters<typeof withTiming>[0]),
+  "user-settings-put"
+);

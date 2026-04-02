@@ -72,7 +72,8 @@ export async function POST(
   }
 
   // --- Save file with UUID key (streaming to reduce RAM usage) ---
-  const ext = path.extname(file.name) || ".mp4";
+  const MIME_TO_EXT: Record<string, string> = { "video/mp4": ".mp4" };
+  const ext = MIME_TO_EXT[file.type] || path.extname(file.name) || ".mp4";
   const storageKey = `users/${session.user.id}/projects/${projectId}/${uuidv4()}${ext}`;
 
   log.info("Saving uploaded file", { fileName: file.name, size: file.size, storageKey });

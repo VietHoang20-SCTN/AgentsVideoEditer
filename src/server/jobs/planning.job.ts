@@ -57,14 +57,14 @@ async function processPlanning(job: Job<PlanningJobData>) {
       try {
         await BackgroundJobService.markFailed(bgJobId, (err as Error).message);
       } catch (cleanupErr) {
-        log.warn({ err: cleanupErr, module: 'planning-job' }, 'Non-critical error suppressed');
+        log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'planning-job' });
       }
     }
 
     try {
       await ProjectService.markFailed(projectId);
     } catch (cleanupErr) {
-      log.warn({ err: cleanupErr, module: 'planning-job' }, 'Non-critical error suppressed');
+      log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'planning-job' });
     }
 
     endTimer({ status: 'failure' });
@@ -76,6 +76,8 @@ export function startPlanningWorker() {
   const worker = new Worker("planning", processPlanning, {
     connection: redis,
     concurrency: env.WORKER_PLANNING_CONCURRENCY,
+    stalledInterval: 30_000,
+    maxStalledCount: 2,
   });
 
   worker.on("completed", (job) => {
@@ -91,7 +93,7 @@ export function startPlanningWorker() {
   });
 
   worker.on("error", (err) => {
-    log.error({ err, module: "planning-worker" }, "BullMQ worker error");
+    log.error("BullMQ worker error", { err, module: "planning-worker" });
   });
 
   return worker;

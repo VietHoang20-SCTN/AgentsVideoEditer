@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { getAIClientConfig, OpenAINotConfiguredError } from "@/lib/ai";
+import { getAIClientConfig } from "@/lib/ai";
 import { aiAnalysisSchema, type AIAnalysis } from "@/lib/validators/ai-analysis";
 import type { AnalysisReport } from "@/lib/validators/analysis";
 
@@ -142,7 +142,12 @@ export async function generateAIAnalysis(
 
   log.info("AI analysis response received, parsing");
 
-  const parsed = JSON.parse(raw);
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`AI returned invalid JSON response: ${raw.slice(0, 200)}`);
+  }
   return parseAIAnalysisResponse(parsed);
 }
 

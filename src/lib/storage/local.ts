@@ -11,13 +11,13 @@ export class LocalStorage implements StorageProvider {
     await fs.writeFile(filePath, data);
   }
 
-  async saveStream(key: string, stream: ReadableStream, size?: number): Promise<void> {
+  async saveStream(key: string, stream: ReadableStream): Promise<void> {
     const { Readable } = await import("stream");
     const { pipeline } = await import("stream/promises");
     const filePath = this.getPath(key);
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     const writeStream = (await import("fs")).createWriteStream(filePath);
-    const nodeStream = Readable.fromWeb(stream as any);
+    const nodeStream = Readable.fromWeb(stream as Parameters<typeof Readable.fromWeb>[0]);
     await pipeline(nodeStream, writeStream);
   }
 
@@ -43,8 +43,14 @@ export class LocalStorage implements StorageProvider {
     }
   }
 
+  private readonly baseDir = UPLOAD_DIR;
+
   getPath(key: string): string {
-    return path.resolve(UPLOAD_DIR, key);
+    const resolved = path.resolve(this.baseDir, key);
+    if (!resolved.startsWith(path.resolve(this.baseDir))) {
+      throw new Error("Invalid storage key: path traversal detected");
+    }
+    return resolved;
   }
 }
 

@@ -97,6 +97,18 @@ async function processRender(job: Job<RenderJobData>) {
       },
     });
 
+    // Fix #8: Increment user's disk usage by the rendered file size
+    const projectForUser = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { userId: true },
+    });
+    if (projectForUser && stat.size > 0) {
+      await prisma.user.update({
+        where: { id: projectForUser.userId },
+        data: { diskUsageBytes: { increment: stat.size } },
+      });
+    }
+
     // Mark render job completed
     await RenderService.markCompleted(renderJobId, outputAsset.id, result.logs);
 
@@ -127,21 +139,21 @@ async function processRender(job: Job<RenderJobData>) {
     try {
       await RenderService.markFailed(renderJobId, (err as Error).message);
     } catch (cleanupErr) {
-      log.warn({ err: cleanupErr, module: 'render-job' }, 'Non-critical error suppressed');
+      log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'render-job' });
     }
 
     if (bgJobId) {
       try {
         await BackgroundJobService.markFailed(bgJobId, (err as Error).message);
       } catch (cleanupErr) {
-        log.warn({ err: cleanupErr, module: 'render-job' }, 'Non-critical error suppressed');
+        log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'render-job' });
       }
     }
 
     try {
       await ProjectService.markFailed(projectId);
     } catch (cleanupErr) {
-      log.warn({ err: cleanupErr, module: 'render-job' }, 'Non-critical error suppressed');
+      log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'render-job' });
     }
 
     endTimer({ status: 'failure' });
@@ -153,6 +165,8 @@ export function startRenderWorker() {
   const worker = new Worker("render", processRender, {
     connection: redis,
     concurrency: env.WORKER_RENDER_CONCURRENCY,
+    stalledInterval: 30_000,
+    maxStalledCount: 2,
   });
 
   worker.on("completed", (job) => {
@@ -168,7 +182,7 @@ export function startRenderWorker() {
   });
 
   worker.on("error", (err) => {
-    log.error({ err, module: "render-worker" }, "BullMQ worker error");
+    log.error("BullMQ worker error", { err, module: "render-worker" });
   });
 
   return worker;

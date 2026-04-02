@@ -26,9 +26,10 @@ async function handlePOST(
   });
   try {
     getAIClientConfig(userSettings ?? undefined);
-  } catch (err: any) {
-    if (err?.statusCode === 501 || err instanceof OpenAINotConfiguredError) {
-      return apiError(err.message ?? "AI API key not configured", 501);
+  } catch (err) {
+    const e = err as { statusCode?: number; message?: string };
+    if (e?.statusCode === 501 || err instanceof OpenAINotConfiguredError) {
+      return apiError(e.message ?? "AI API key not configured", 501);
     }
     throw err;
   }
@@ -106,9 +107,10 @@ async function handlePOST(
         removeOnFail: { age: 86400 },
       }
     );
-  } catch (err: any) {
-    log.error("Failed to enqueue analysis job", { error: err?.message, stack: err?.stack });
-    return apiError(`Failed to enqueue job: ${err?.message}`, 500);
+  } catch (err) {
+    const e = err as { message?: string; stack?: string };
+    log.error("Failed to enqueue analysis job", { error: e?.message, stack: e?.stack });
+    return apiError(`Failed to enqueue job: ${e?.message}`, 500);
   }
   log.info("Queue job created", { queueJobId: queueJob.id });
 
@@ -120,9 +122,10 @@ async function handlePOST(
       JobType.ANALYSIS,
       queueJob.id ?? deterministicJobId
     );
-  } catch (err: any) {
-    log.error("Failed to create BackgroundJob record", { error: err?.message, stack: err?.stack });
-    return apiError(`Failed to create job record: ${err?.message}`, 500);
+  } catch (err) {
+    const e = err as { message?: string; stack?: string };
+    log.error("Failed to create BackgroundJob record", { error: e?.message, stack: e?.stack });
+    return apiError(`Failed to create job record: ${e?.message}`, 500);
   }
 
   log.info("Analysis job enqueued", { projectId, jobId: bgJob.id });

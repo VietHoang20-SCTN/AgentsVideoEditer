@@ -49,11 +49,13 @@ export async function GET(
       },
     });
 
+    const safeFileName = asset.fileName.replace(/[^\w.\-]/g, '_');
+
     return new Response(webStream, {
       headers: {
         "Content-Type": asset.mimeType,
         "Content-Length": fileStat.size.toString(),
-        "Content-Disposition": `attachment; filename="${asset.fileName}"`,
+        "Content-Disposition": `attachment; filename="${safeFileName}"`,
       },
     });
   } catch {

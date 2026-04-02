@@ -76,9 +76,10 @@ async function handlePOST(
   });
   try {
     getAIClientConfig(userSettings ?? undefined);
-  } catch (err: any) {
-    if (err?.statusCode === 501 || err instanceof OpenAINotConfiguredError) {
-      return apiError(err.message ?? "AI API key not configured", 501);
+  } catch (err) {
+    const e = err as { statusCode?: number; message?: string };
+    if (e?.statusCode === 501 || err instanceof OpenAINotConfiguredError) {
+      return apiError(e.message ?? "AI API key not configured", 501);
     }
     throw err;
   }

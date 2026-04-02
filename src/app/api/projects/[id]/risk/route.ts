@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db/prisma";
 import { RiskService } from "@/server/services/risk.service";
 import { AnalysisService } from "@/server/services/analysis.service";
 import { analysisReportSchema } from "@/lib/validators/analysis";
+import { withTiming } from "@/lib/api/with-timing";
+import { withErrorHandler } from "@/lib/api/errors";
 
-export async function GET(
+async function handleGET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -45,7 +47,7 @@ export async function GET(
 }
 
 /** POST to (re)generate risk report from latest analysis */
-export async function POST(
+async function handlePOST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -92,3 +94,13 @@ export async function POST(
     },
   });
 }
+
+export const GET = withTiming(
+  withErrorHandler(handleGET as Parameters<typeof withTiming>[0]),
+  "risk-get"
+);
+
+export const POST = withTiming(
+  withErrorHandler(handlePOST as Parameters<typeof withTiming>[0]),
+  "risk-post"
+);

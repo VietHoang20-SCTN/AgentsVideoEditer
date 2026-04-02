@@ -3,6 +3,7 @@ import { createReadStream } from "fs";
 import { stat } from "fs/promises";
 import path from "path";
 import { storage } from "@/lib/storage/factory";
+import { auth } from "@/lib/auth";
 
 // Chunk size for range requests: 1MB
 const CHUNK_SIZE = 1024 * 1024;
@@ -76,6 +77,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+
   const { path: pathSegments } = await params;
 
   // --- Validate path segments ---
@@ -100,6 +104,11 @@ export async function GET(
   // Reconstruct the storage key from path segments
   const key = pathSegments.join("/");
 
+  // Ownership check: only serve files belonging to the authenticated user
+  if (!key.startsWith(`users/${session.user.id}/`)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
   // --- Check file existence via storage provider ---
   const fileExists = await storage.exists(key);
   if (!fileExists) {
@@ -111,6 +120,13 @@ export async function GET(
 
   // Resolve the absolute file path from the storage provider
   const filePath = storage.getPath(key);
+
+  // Path traversal guard: ensure resolved path stays within upload directory
+  const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || "./uploads");
+  if (!path.resolve(filePath).startsWith(UPLOAD_DIR)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
   const mimeType = getMimeType(filePath);
 
   try {

@@ -20,9 +20,9 @@ export function apiError(message: string, status = 500, code?: string) {
 }
 
 export function withErrorHandler(
-  handler: (req: Request, ctx: any) => Promise<Response>
+  handler: (req: Request, ctx: unknown) => Promise<Response>
 ) {
-  return async (req: Request, ctx: any): Promise<Response> => {
+  return async (req: Request, ctx: unknown): Promise<Response> => {
     try {
       return await handler(req, ctx)
     } catch (err) {
@@ -30,9 +30,10 @@ export function withErrorHandler(
         return apiError(err.message, err.statusCode, err.code)
       }
       if (err && typeof err === 'object' && 'statusCode' in err) {
-        return apiError((err as any).message, (err as any).statusCode)
+        const e = err as { message?: string; statusCode: number }
+        return apiError(e.message ?? 'Internal server error', e.statusCode)
       }
-      logger.error({ err }, 'Unhandled API error')
+      logger.error('Unhandled API error', { err: err instanceof Error ? err.message : String(err) })
       return apiError('Internal server error', 500)
     }
   }

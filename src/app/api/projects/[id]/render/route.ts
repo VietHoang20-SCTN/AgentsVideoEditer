@@ -9,9 +9,11 @@ import { BackgroundJobService } from "@/server/services/background-job.service";
 import { JobType, ProjectStatus } from "@/generated/prisma/client";
 import { redis } from "@/lib/queue/connection";
 import { rateLimit } from "@/lib/rate-limit";
+import { withTiming } from "@/lib/api/with-timing";
+import { withErrorHandler } from "@/lib/api/errors";
 
 /** GET — retrieve latest render job + output */
-export async function GET(
+async function handleGET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -69,7 +71,7 @@ export async function GET(
 }
 
 /** POST — start a new render */
-export async function POST(
+async function handlePOST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -125,14 +127,15 @@ export async function POST(
   // Create RenderJob record
   const renderJob = await RenderService.create(projectId, latestPlan.promptVersion);
 
-  // Enqueue
+  // Enqueue — Fix #6: retry with exponential backoff
   const deterministicJobId = `render-${projectId}`;
   const queueJob = await renderQueue.add(
     "render",
     { projectId, renderJobId: renderJob.id },
     {
       jobId: deterministicJobId,
-      attempts: 1,
+      attempts: 2,
+      backoff: { type: "exponential", delay: 10000 },
       removeOnComplete: { age: 3600 },
       removeOnFail: { age: 86400 },
     }
@@ -151,3 +154,13 @@ export async function POST(
     message: "Render job enqueued",
   });
 }
+
+export const GET = withTiming(
+  withErrorHandler(handleGET as Parameters<typeof withTiming>[0]),
+  "render-get"
+);
+
+export const POST = withTiming(
+  withErrorHandler(handlePOST as Parameters<typeof withTiming>[0]),
+  "render-post"
+);

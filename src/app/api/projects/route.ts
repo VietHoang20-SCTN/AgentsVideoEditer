@@ -2,30 +2,37 @@ import { auth } from "@/lib/auth";
 import { apiSuccess, apiError } from "@/server/api/response";
 import { ProjectService } from "@/server/services/project.service";
 import { createProjectSchema } from "@/lib/validators/project";
-import { z } from "zod";
+import { withTiming } from "@/lib/api/with-timing";
+import { withErrorHandler } from "@/lib/api/errors";
 
-export async function GET() {
+async function handleGET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return apiError("Unauthorized", 401);
 
-  const projects = await ProjectService.list(session.user.id);
-  return apiSuccess(projects);
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+
+  const result = await ProjectService.list(session.user.id, page, limit);
+  return apiSuccess(result);
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return apiError("Unauthorized", 401);
 
-  try {
-    const body = await req.json();
-    const data = createProjectSchema.parse(body);
-    const project = await ProjectService.create(session.user.id, data);
-    return apiSuccess(project, 201);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiError(error.issues[0].message);
-    }
-    console.error("[POST /api/projects] error:", error);
-    return apiError("Internal server error", 500);
-  }
+  const body = await req.json();
+  const data = createProjectSchema.parse(body);
+  const project = await ProjectService.create(session.user.id, data);
+  return apiSuccess(project, 201);
 }
+
+export const GET = withTiming(
+  withErrorHandler(handleGET as Parameters<typeof withTiming>[0]),
+  "projects-list"
+);
+
+export const POST = withTiming(
+  withErrorHandler(handlePOST as Parameters<typeof withTiming>[0]),
+  "projects-create"
+);

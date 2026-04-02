@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { redis } from '@/lib/queue/connection'
+import { env } from '@/lib/env'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req?: Request) {
+  // Check if caller has a valid metrics token for detailed info
+  const authHeader = req?.headers.get("authorization");
+  const hasValidToken = env.METRICS_TOKEN && authHeader === `Bearer ${env.METRICS_TOKEN}`;
+
+  // Public response: just status
+  if (!hasValidToken) {
+    return NextResponse.json({ status: "ok" });
+  }
+
+  // Detailed response for authenticated callers
   const checks: Record<string, { status: 'ok' | 'error'; latencyMs?: number; error?: string }> = {}
 
   // DB check

@@ -38,7 +38,6 @@ export interface RenderResult {
  *      0.25x → atempo=0.5,atempo=0.5
  */
 function buildAtempoChain(inLabel: string, speedFactor: number, outLabel: string): string {
-  const filters: string[] = [];
   let remaining = speedFactor;
 
   // Build list of per-filter values

@@ -224,7 +224,7 @@ async function processAnalysis(job: Job<AnalysisJobData>) {
       try {
         await BackgroundJobService.markFailed(bgJobId, (err as Error).message, stepResults);
       } catch (cleanupErr) {
-        log.warn({ err: cleanupErr, module: 'analysis-job' }, 'Non-critical error suppressed');
+        log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'analysis-job' });
       }
     }
 
@@ -232,7 +232,7 @@ async function processAnalysis(job: Job<AnalysisJobData>) {
     try {
       await ProjectService.markFailed(projectId);
     } catch (cleanupErr) {
-      log.warn({ err: cleanupErr, module: 'analysis-job' }, 'Non-critical error suppressed');
+      log.warn('Non-critical error suppressed', { err: cleanupErr, module: 'analysis-job' });
     }
 
     endTimer({ status: 'failure' });
@@ -244,6 +244,8 @@ export function startAnalysisWorker() {
   const worker = new Worker("analysis", processAnalysis, {
     connection: redis,
     concurrency: env.WORKER_ANALYSIS_CONCURRENCY,
+    stalledInterval: 30_000,
+    maxStalledCount: 2,
   });
 
   worker.on("completed", (job) => {
@@ -259,7 +261,7 @@ export function startAnalysisWorker() {
   });
 
   worker.on("error", (err) => {
-    log.error({ err, module: "analysis-worker" }, "BullMQ worker error");
+    log.error("BullMQ worker error", { err, module: "analysis-worker" });
   });
 
   return worker;

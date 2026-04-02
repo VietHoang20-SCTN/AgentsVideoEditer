@@ -36,14 +36,3 @@ export function getAIClientConfig(userSettings?: {
   if (!apiKey) throw new OpenAINotConfiguredError();
   return { apiKey, ...(baseURL ? { baseURL } : {}) };
 }
-
-/**
- * Assert that an AI API key is present in the environment.
- * Throws OpenAINotConfiguredError (statusCode 501) if not set.
- * Call this at the top of any function that uses the OpenAI client.
- */
-export function assertOpenAIConfigured(): void {
-  if (!env.AI_API_KEY && !env.OPENAI_API_KEY) {
-    throw new OpenAINotConfiguredError();
-  }
-}

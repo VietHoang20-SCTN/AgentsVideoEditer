@@ -18,14 +18,25 @@ log.info("All workers started (analysis, planning, render), waiting for jobs..."
 async function shutdown(signal: string) {
   log.info("Received shutdown signal, closing workers...", { signal });
 
-  await Promise.all([
-    analysisWorker.close(),
-    planningWorker.close(),
-    renderWorker.close(),
-  ]);
+  const timeout = setTimeout(() => {
+    log.error("Graceful shutdown timed out after 30s, forcing exit");
+    process.exit(1);
+  }, 30_000);
 
-  log.info("Workers closed, exiting");
-  process.exit(0);
+  try {
+    await Promise.all([
+      analysisWorker.close(),
+      planningWorker.close(),
+      renderWorker.close(),
+    ]);
+    clearTimeout(timeout);
+    log.info("All workers shut down gracefully");
+    process.exit(0);
+  } catch (err) {
+    clearTimeout(timeout);
+    log.error("Error during shutdown", { error: err });
+    process.exit(1);
+  }
 }
 
 process.on("SIGINT", () => shutdown("SIGINT"));

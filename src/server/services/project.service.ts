@@ -33,21 +33,38 @@ export class ProjectService {
     });
   }
 
-  static async list(userId: string) {
-    return prisma.project.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { mediaAssets: true } },
-      },
-    });
+  static async list(userId: string, page = 1, limit = 20) {
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: (page - 1) * limit,
+        include: { _count: { select: { mediaAssets: true } } },
+      }),
+      prisma.project.count({ where: { userId } }),
+    ]);
+    return { projects, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   static async getById(id: string, userId: string) {
     return prisma.project.findFirst({
       where: { id, userId },
       include: {
-        mediaAssets: true,
+        mediaAssets: {
+          select: {
+            id: true,
+            type: true,
+            storageKey: true,
+            fileName: true,
+            mimeType: true,
+            durationMs: true,
+            width: true,
+            height: true,
+            sizeBytes: true,
+            createdAt: true,
+          },
+        },
         _count: { select: { mediaAssets: true } },
       },
     });
@@ -139,7 +156,9 @@ export class ProjectService {
   }
 
   static async markFailed(id: string) {
-    // FAILED is always reachable from non-DRAFT states
+    // FAILED is reachable from active processing states only — prevents
+    // clobbering a project that already transitioned to a success state.
+    // Uses update (not updateMany) so we can return the updated project record.
     return prisma.project.update({
       where: { id },
       data: { status: ProjectStatus.FAILED },
