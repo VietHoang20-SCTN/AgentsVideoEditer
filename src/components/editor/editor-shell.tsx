@@ -19,8 +19,10 @@ import { generateId } from "@/types/editor";
 
 import { useEditorActions, usePlayheadMs } from "@/hooks/use-editor-store";
 import { useEditorStore } from "@/stores/editor-store";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 import { EditorLayout, EditorHeader, LeftPanel, RightPanel, PreviewPanel } from "./layout";
+import { Timeline } from "./timeline";
 import AnalysisSidebar from "./analysis-sidebar";
 import { outputToSourceTime, sourceToOutputTime } from "@/lib/editor/utils";
 
@@ -160,6 +162,9 @@ export default function EditorShell({
   const playheadMs = usePlayheadMs();
   const initializedRef = useRef(false);
 
+  // ── Global keyboard shortcuts ─────────────────────────
+  useKeyboardShortcuts();
+
   // ── Initialize store from legacy state (once) ───────
   useEffect(() => {
     if (initializedRef.current) return;
@@ -241,99 +246,8 @@ export default function EditorShell({
       }
       rightPanel={<RightPanel />}
       timeline={
-        <TimelinePlaceholder />
+        <Timeline />
       }
     />
-  );
-}
-
-// ── Temporary timeline placeholder ────────────────────
-// Will be replaced by the real multi-track timeline in Phase 2.
-
-function TimelinePlaceholder() {
-  const playheadMs = usePlayheadMs();
-  const { togglePlayback, seekForward, seekBackward } = useEditorActions();
-  const tracks = useEditorStore((s) => s.tracks);
-  const trackItems = useEditorStore((s) => s.trackItems);
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Mini toolbar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-800 bg-gray-900/80">
-        <button
-          onClick={togglePlayback}
-          className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
-        >
-          Play/Pause
-        </button>
-        <button
-          onClick={() => seekBackward(5000)}
-          className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
-        >
-          -5s
-        </button>
-        <button
-          onClick={() => seekForward(5000)}
-          className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
-        >
-          +5s
-        </button>
-        <span className="text-xs text-gray-500 font-mono ml-auto">
-          {Math.floor(playheadMs / 1000)}s
-        </span>
-        <span className="text-xs text-gray-600 ml-2">
-          {tracks.length} tracks | {trackItems.length} items
-        </span>
-      </div>
-
-      {/* Track lanes (basic visualization) */}
-      <div className="flex-1 overflow-auto p-2">
-        {tracks.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs">
-            No tracks. Multi-track timeline coming in Phase 2.
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {tracks
-              .sort((a, b) => a.order - b.order)
-              .map((track) => {
-                const items = trackItems.filter((i) => i.trackId === track.id);
-                return (
-                  <div
-                    key={track.id}
-                    className="flex items-center gap-2 h-10 bg-gray-800/50 rounded px-2"
-                  >
-                    <span className="text-xs text-gray-400 w-16 shrink-0 truncate">
-                      {track.name}
-                    </span>
-                    <div className="flex-1 relative h-6">
-                      {items.map((item) => {
-                        const maxEnd = Math.max(
-                          ...trackItems.map((i) => i.endMs),
-                          1
-                        );
-                        const left = (item.startMs / maxEnd) * 100;
-                        const width =
-                          ((item.endMs - item.startMs) / maxEnd) * 100;
-                        return (
-                          <div
-                            key={item.id}
-                            className="absolute top-0 h-full rounded bg-blue-600/60 border border-blue-500/40"
-                            style={{
-                              left: `${left}%`,
-                              width: `${Math.max(width, 0.5)}%`,
-                            }}
-                            title={`${item.name} (${Math.round(item.startMs / 1000)}s - ${Math.round(item.endMs / 1000)}s)`}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        )}
-      </div>
-    </div>
   );
 }

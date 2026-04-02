@@ -1,42 +1,34 @@
 // ============================================
-// Right Panel - Properties Inspector
-// Shows properties for the selected item
+// Right Panel - Interactive Properties Inspector
+// Dispatches to store via type-specific editors
 // ============================================
 
 "use client";
 
 import React from "react";
-import {
-  Settings,
-  Film,
-  Music,
-  Type,
-  Image,
-  Sparkles,
-} from "lucide-react";
+import { Settings, Film, Music, Type, Image, Sparkles, GitBranch, Wand2 } from "lucide-react";
 import { usePanels, useSingleSelectedItem } from "@/hooks/use-editor-store";
-import type { TrackItem } from "@/types/editor";
-import { formatTime } from "@/lib/editor/utils";
+import type {
+  TrackItem,
+  VideoClipItem,
+  AudioClipItem,
+  TextOverlayItem,
+  StickerItem,
+  EffectItem,
+  TransitionItem,
+  FilterItem,
+} from "@/types/editor";
 
-function PropertyRow({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex items-center justify-between py-1.5">
-      <span className="text-xs text-gray-400">{label}</span>
-      <span className="text-xs text-gray-200 font-mono">{value}</span>
-    </div>
-  );
-}
+import BaseProperties from "@/components/editor/properties/base-properties";
+import VideoClipProperties from "@/components/editor/properties/video-clip-properties";
+import AudioClipProperties from "@/components/editor/properties/audio-clip-properties";
+import TextOverlayProperties from "@/components/editor/properties/text-overlay-properties";
+import StickerProperties from "@/components/editor/properties/sticker-properties";
+import EffectProperties from "@/components/editor/properties/effect-properties";
+import TransitionProperties from "@/components/editor/properties/transition-properties";
+import FilterProperties from "@/components/editor/properties/filter-properties";
 
-function PropertySection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="border-b border-gray-800 pb-3 mb-3">
-      <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-}
+// ── Item type icon ────────────────────────────
 
 function ItemIcon({ type }: { type: string }) {
   switch (type) {
@@ -46,64 +38,85 @@ function ItemIcon({ type }: { type: string }) {
       return <Music size={14} className="text-green-400" />;
     case "text-overlay":
       return <Type size={14} className="text-yellow-400" />;
-    case "image-overlay":
-      // eslint-disable-next-line jsx-a11y/alt-text
+    case "sticker":
       return <Image size={14} className="text-purple-400" />;
     case "effect":
       return <Sparkles size={14} className="text-pink-400" />;
+    case "transition":
+      return <GitBranch size={14} className="text-orange-400" />;
+    case "filter":
+      return <Wand2 size={14} className="text-cyan-400" />;
     default:
       return <Settings size={14} className="text-gray-400" />;
   }
 }
 
-function ItemProperties({ item }: { item: TrackItem }) {
-  const durationMs = item.endMs - item.startMs;
+// ── Type badge color ──────────────────────────
 
+function typeBadgeClass(type: string): string {
+  switch (type) {
+    case "video-clip":   return "bg-blue-900/50 text-blue-300";
+    case "audio-clip":   return "bg-green-900/50 text-green-300";
+    case "text-overlay": return "bg-yellow-900/50 text-yellow-300";
+    case "sticker":      return "bg-purple-900/50 text-purple-300";
+    case "effect":       return "bg-pink-900/50 text-pink-300";
+    case "transition":   return "bg-orange-900/50 text-orange-300";
+    case "filter":       return "bg-cyan-900/50 text-cyan-300";
+    default:             return "bg-gray-800 text-gray-400";
+  }
+}
+
+// ── Type-specific property editor switch ──────
+
+function TypeSpecificProperties({ item }: { item: TrackItem }) {
+  switch (item.type) {
+    case "video-clip":
+      return <VideoClipProperties item={item as VideoClipItem} />;
+    case "audio-clip":
+      return <AudioClipProperties item={item as AudioClipItem} />;
+    case "text-overlay":
+      return <TextOverlayProperties item={item as TextOverlayItem} />;
+    case "sticker":
+      return <StickerProperties item={item as StickerItem} />;
+    case "effect":
+      return <EffectProperties item={item as EffectItem} />;
+    case "transition":
+      return <TransitionProperties item={item as TransitionItem} />;
+    case "filter":
+      return <FilterProperties item={item as FilterItem} />;
+    default:
+      return null;
+  }
+}
+
+// ── Full item inspector ───────────────────────
+
+function ItemInspector({ item }: { item: TrackItem }) {
   return (
-    <div className="p-3">
+    <div className="flex flex-col">
       {/* Item header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-800">
         <ItemIcon type={item.type} />
-        <span className="text-sm font-medium text-white truncate">
+        <span className="flex-1 text-sm font-medium text-white truncate">
           {item.name || item.type}
+        </span>
+        <span
+          className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${typeBadgeClass(item.type)}`}
+        >
+          {item.type.replace("-", " ")}
         </span>
       </div>
 
-      {/* Timing */}
-      <PropertySection title="Timing">
-        <PropertyRow label="Start" value={formatTime(item.startMs)} />
-        <PropertyRow label="End" value={formatTime(item.endMs)} />
-        <PropertyRow label="Duration" value={formatTime(durationMs)} />
-      </PropertySection>
+      {/* Base properties (timing, opacity, lock) */}
+      <BaseProperties item={item} />
 
-      {/* Appearance */}
-      <PropertySection title="Appearance">
-        <PropertyRow label="Opacity" value={`${item.opacity}%`} />
-        <PropertyRow label="Locked" value={item.locked ? "Yes" : "No"} />
-      </PropertySection>
-
-      {/* Type-specific properties */}
-      {(item.type === "video-clip" || item.type === "audio-clip") && "properties" in item && (
-        <PropertySection title="Source">
-          <PropertyRow
-            label="Source Start"
-            value={formatTime((item.properties as { sourceStartMs: number }).sourceStartMs)}
-          />
-          <PropertyRow
-            label="Source End"
-            value={formatTime((item.properties as { sourceEndMs: number }).sourceEndMs)}
-          />
-          {item.type === "video-clip" && (
-            <PropertyRow
-              label="Volume"
-              value={`${(item.properties as { volume: number }).volume}%`}
-            />
-          )}
-        </PropertySection>
-      )}
+      {/* Type-specific property sections */}
+      <TypeSpecificProperties item={item} />
     </div>
   );
 }
+
+// ── Main panel ────────────────────────────────
 
 export default function RightPanel() {
   const panels = usePanels();
@@ -122,7 +135,7 @@ export default function RightPanel() {
             <Settings size={24} />
             <span className="text-xs">No item selected</span>
             <span className="text-xs text-gray-600">
-              Select an item on the timeline to view properties
+              Select an item on the timeline to edit its properties
             </span>
           </div>
         </div>
@@ -132,13 +145,16 @@ export default function RightPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-gray-800">
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-gray-800 shrink-0">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Properties
         </h2>
       </div>
+
+      {/* Scrollable inspector content */}
       <div className="flex-1 overflow-y-auto">
-        <ItemProperties item={selectedItem} />
+        <ItemInspector item={selectedItem} />
       </div>
     </div>
   );

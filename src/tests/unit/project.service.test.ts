@@ -2,12 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProjectService, assertValidTransition } from '@/server/services/project.service'
 import { ProjectStatus } from '@/generated/prisma/client'
 
-const mockProject = {
-  findUnique: vi.fn(),
-  findUniqueOrThrow: vi.fn(),
-  updateMany: vi.fn(),
-  update: vi.fn(),
-}
+const { mockProject } = vi.hoisted(() => {
+  const mockProject = {
+    findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
+    updateMany: vi.fn(),
+    update: vi.fn(),
+  }
+  return { mockProject }
+})
 
 vi.mock('@/lib/db/prisma', () => ({
   prisma: {
