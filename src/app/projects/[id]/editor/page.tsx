@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import EditorShell from "@/components/editor/editor-shell";
 import type {
   EditorProject,
   SourceVideoInfo,
@@ -13,6 +13,21 @@ import type {
   Clip,
   Marker,
 } from "@/components/editor/types";
+
+const EditorShell = dynamic(
+  () => import("@/components/editor/editor-shell"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-screen bg-gray-950">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-10 w-10 animate-spin text-yellow-500" />
+          <p className="text-sm text-gray-400">Loading editor...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 export default function EditorPage() {
   const params = useParams();

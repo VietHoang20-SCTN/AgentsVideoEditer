@@ -13,7 +13,6 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
-  Maximize2,
 } from "lucide-react";
 import { useEditorActions, usePlayback, usePlayheadMs, useDuration } from "@/hooks/use-editor-store";
 import { formatTime } from "@/lib/editor/utils";
@@ -34,9 +33,7 @@ export default function PreviewPanel({ videoSrc, sourceTimeMs }: PreviewPanelPro
     togglePlayback,
     setPlayhead,
     seekForward,
-    seekBackward,
     seekToStart,
-    setMasterVolume,
   } = useEditorActions();
 
   const [isMuted, setIsMuted] = useState(false);
@@ -84,8 +81,6 @@ export default function PreviewPanel({ videoSrc, sourceTimeMs }: PreviewPanelPro
       return newMuted;
     });
   }, []);
-
-  const progress = duration > 0 ? (playheadMs / duration) * 100 : 0;
 
   return (
     <div className="flex flex-col w-full max-w-4xl mx-auto p-4">

@@ -14,7 +14,7 @@ import {
   Image,
   Sparkles,
 } from "lucide-react";
-import { usePanels, useSingleSelectedItem, useEditorActions } from "@/hooks/use-editor-store";
+import { usePanels, useSingleSelectedItem } from "@/hooks/use-editor-store";
 import type { TrackItem } from "@/types/editor";
 import { formatTime } from "@/lib/editor/utils";
 
@@ -47,6 +47,7 @@ function ItemIcon({ type }: { type: string }) {
     case "text-overlay":
       return <Type size={14} className="text-yellow-400" />;
     case "image-overlay":
+      // eslint-disable-next-line jsx-a11y/alt-text
       return <Image size={14} className="text-purple-400" />;
     case "effect":
       return <Sparkles size={14} className="text-pink-400" />;

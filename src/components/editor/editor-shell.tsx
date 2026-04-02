@@ -17,7 +17,7 @@ import type {
 import type { SerializedEditorState, Track, TrackItem } from "@/types/editor";
 import { generateId } from "@/types/editor";
 
-import { useEditorActions, useIsDirty, usePlayheadMs } from "@/hooks/use-editor-store";
+import { useEditorActions, usePlayheadMs } from "@/hooks/use-editor-store";
 import { useEditorStore } from "@/stores/editor-store";
 
 import { EditorLayout, EditorHeader, LeftPanel, RightPanel, PreviewPanel } from "./layout";
@@ -158,7 +158,6 @@ export default function EditorShell({
 }: EditorShellProps) {
   const { loadState, markClean } = useEditorActions();
   const playheadMs = usePlayheadMs();
-  const isDirty = useIsDirty();
   const initializedRef = useRef(false);
 
   // ── Initialize store from legacy state (once) ───────
@@ -172,9 +171,9 @@ export default function EditorShell({
 
   // ── Source/Output time conversion ────────────────────
   // Legacy clips for time conversion (video clips only)
+  const trackItems = useEditorStore((s) => s.trackItems);
   const legacyClips = useMemo(() => {
-    const store = useEditorStore.getState();
-    return store.trackItems
+    return trackItems
       .filter((item) => item.type === "video-clip")
       .sort((a, b) => a.startMs - b.startMs)
       .map((item) => {
@@ -187,7 +186,7 @@ export default function EditorShell({
           sourceEndMs: props.sourceEndMs,
         };
       });
-  }, [playheadMs]); // Re-derive when playhead moves (implies clips might have changed)
+  }, [trackItems]);
 
   const sourceTimeMs = useMemo(
     () => outputToSourceTime(legacyClips, playheadMs),
@@ -253,7 +252,7 @@ export default function EditorShell({
 
 function TimelinePlaceholder() {
   const playheadMs = usePlayheadMs();
-  const { togglePlayback, setPlayhead, seekForward, seekBackward } = useEditorActions();
+  const { togglePlayback, seekForward, seekBackward } = useEditorActions();
   const tracks = useEditorStore((s) => s.tracks);
   const trackItems = useEditorStore((s) => s.trackItems);
 
