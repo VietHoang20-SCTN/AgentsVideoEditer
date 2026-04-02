@@ -6,6 +6,26 @@ const mockRegistry = {
 }
 
 vi.mock('@/lib/metrics', () => ({ registry: mockRegistry }))
+vi.mock('@/lib/env', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://localhost/test',
+    REDIS_URL: 'redis://localhost:6379',
+    NEXTAUTH_SECRET: 'test-secret-that-is-at-least-32-chars!!',
+    NEXTAUTH_URL: 'http://localhost:3000',
+    UPLOAD_DIR: './uploads',
+    OPENAI_API_KEY: undefined,
+    AI_BASE_URL: undefined,
+    AI_API_KEY: undefined,
+    FFMPEG_PATH: 'ffmpeg',
+    FFPROBE_PATH: 'ffprobe',
+    WORKER_ANALYSIS_CONCURRENCY: 1,
+    WORKER_PLANNING_CONCURRENCY: 1,
+    WORKER_RENDER_CONCURRENCY: 1,
+    DISK_QUOTA_BYTES: 5368709120,
+    STORAGE_PROVIDER: 'local',
+    METRICS_TOKEN: undefined,
+  },
+}))
 
 describe('GET /api/metrics', () => {
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { rateLimit } from '@/lib/rate-limit'
 import type { RateLimitResult } from '@/lib/rate-limit'
+import type { Redis } from 'ioredis'
 
 // Mock ioredis client
 const mockRedis = {
@@ -18,7 +19,7 @@ describe('rateLimit', () => {
     mockRedis.expire.mockResolvedValue(1)
 
     const result: RateLimitResult = await rateLimit(
-      mockRedis as any,
+      mockRedis as unknown as Redis,
       'ratelimit:user1:upload',
       10,
       60
@@ -33,7 +34,7 @@ describe('rateLimit', () => {
     mockRedis.incr.mockResolvedValue(10)
     mockRedis.expire.mockResolvedValue(1)
 
-    const result = await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    const result = await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
 
     expect(result.allowed).toBe(true)
     expect(result.remaining).toBe(0)
@@ -43,7 +44,7 @@ describe('rateLimit', () => {
     mockRedis.incr.mockResolvedValue(11)
     // count > 1, so expire is not called
 
-    const result = await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    const result = await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
 
     expect(result.allowed).toBe(false)
     expect(result.remaining).toBe(0)
@@ -52,7 +53,7 @@ describe('rateLimit', () => {
   it('blocks request when well over limit', async () => {
     mockRedis.incr.mockResolvedValue(100)
 
-    const result = await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    const result = await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
 
     expect(result.allowed).toBe(false)
     expect(result.remaining).toBe(0)
@@ -62,7 +63,7 @@ describe('rateLimit', () => {
     mockRedis.incr.mockResolvedValue(1)
     mockRedis.expire.mockResolvedValue(1)
 
-    await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
 
     expect(mockRedis.expire).toHaveBeenCalledTimes(1)
     expect(mockRedis.expire).toHaveBeenCalledWith('ratelimit:user1:upload', 60)
@@ -71,7 +72,7 @@ describe('rateLimit', () => {
   it('does NOT call expire on subsequent requests (count > 1)', async () => {
     mockRedis.incr.mockResolvedValue(3)
 
-    await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
 
     expect(mockRedis.expire).not.toHaveBeenCalled()
   })
@@ -81,7 +82,7 @@ describe('rateLimit', () => {
     mockRedis.expire.mockResolvedValue(1)
 
     const before = Math.floor(Date.now() / 1000)
-    const result = await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    const result = await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
     const after = Math.floor(Date.now() / 1000)
 
     expect(result.resetAt).toBeGreaterThanOrEqual(before + 60)
@@ -93,7 +94,7 @@ describe('rateLimit', () => {
     mockRedis.expire.mockResolvedValue(1)
 
     const key = 'ratelimit:someUser:someAction'
-    await rateLimit(mockRedis as any, key, 5, 30)
+    await rateLimit(mockRedis as unknown as Redis, key, 5, 30)
 
     expect(mockRedis.incr).toHaveBeenCalledWith(key)
   })
@@ -101,7 +102,7 @@ describe('rateLimit', () => {
   it('remaining is clamped to 0 when count exceeds limit', async () => {
     mockRedis.incr.mockResolvedValue(999)
 
-    const result = await rateLimit(mockRedis as any, 'ratelimit:user1:upload', 10, 60)
+    const result = await rateLimit(mockRedis as unknown as Redis, 'ratelimit:user1:upload', 10, 60)
 
     expect(result.remaining).toBe(0)
   })

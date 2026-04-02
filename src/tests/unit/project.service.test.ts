@@ -1,9 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { prisma } from '@/lib/db/prisma'
 import { ProjectService, assertValidTransition } from '@/server/services/project.service'
 import { ProjectStatus } from '@/generated/prisma/client'
 
-const mockPrisma = vi.mocked(prisma)
+const mockProject = {
+  findUnique: vi.fn(),
+  findUniqueOrThrow: vi.fn(),
+  updateMany: vi.fn(),
+  update: vi.fn(),
+}
+
+vi.mock('@/lib/db/prisma', () => ({
+  prisma: {
+    project: mockProject,
+  },
+}))
+
+// Typed mock accessor
+const mockPrisma = {
+  project: mockProject as {
+    findUnique: ReturnType<typeof vi.fn>;
+    findUniqueOrThrow: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  },
+}
 
 // ---------------------------------------------------------------------------
 // assertValidTransition
